@@ -7,13 +7,15 @@ export const ContentBoxStyled = styled.div`
     box-sizing: border-box;
     display: block;
     + div {
-        margin-top: -52px;
-        margin-left: 450px;
+        margin-top: -65px;
+        margin-left: 550px;
+        margin-bottom: 40px;
     }
 `;
 
 export const ContentName = styled.div`
     width: max-content;
+    line-height: 50px;
     font-size: 30px;
     margin-left: 10px;
     font-weight: bold;
