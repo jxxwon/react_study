@@ -6,6 +6,7 @@ import { NoticeModal } from "../NoticeModal/NoticeModal";
 import { Protal } from "../../../common/potal/Portal";
 import { useRecoilState } from "recoil";
 import { modalState } from "../../../../stores/modalState";
+import { PageNavigate } from "../../../common/pageNavigation/PageNavigate";
 
 export interface INoticeList {
     file_ext: string;
@@ -21,16 +22,20 @@ export interface INoticeList {
 }
 
 export interface INoticeListJsonResponse{
-    listCount: number;
+    noticeCnt: number;
     noticeList: INoticeList[];
 }
 
 export const NoticeMain = () => {
     const { search } = useLocation(); //search는 URL을 의미
     const [noticeList, setNoticeList] = useState<INoticeList[]>([]);
+    const [listCount, setListCount] = useState<number>(0);
     // const [modalState, setModalState] = useState<boolean>(false);
     const [modal, setModal] = useRecoilState<boolean>(modalState); //boolean이 아닌 다른 값을 저장하지 못하게 하려고
     const [notiSeq, setNotiSeq] = useState<number>();
+    const [currentParam, setCurrentParam] = useState<number | undefined>();
+
+
     useEffect(() => {
         searchNoticeList();
     }, [search]);
@@ -44,6 +49,8 @@ export const NoticeMain = () => {
 
         axios.post('/system/noticeListJson.do', searchParam).then((res: AxiosResponse<INoticeListJsonResponse>) => {
             setNoticeList(res.data.noticeList);
+            setListCount(res.data.noticeCnt);
+            setCurrentParam(cpage);
         });
     };
 
@@ -54,10 +61,15 @@ export const NoticeMain = () => {
         setModal(!modal);
     };
 
+    const postSuccess = () => {
+        setModal(!modal);
+        searchNoticeList();
+    }
+
 
     return (
         <>
-            총 갯수 : 0 현재 페이지 : 0
+            총 갯수 : {listCount} 현재 페이지 : {currentParam}
             <StyledTable>
                 <thead>
                     <tr>
@@ -83,12 +95,14 @@ export const NoticeMain = () => {
                         </tr>
                     )}
                 </tbody>
-                {modal ? (
-                    <Protal>
-                        <NoticeModal noticeSeq = {notiSeq}></NoticeModal>
-                    </Protal>
-                ) : null}
             </StyledTable>
+            <PageNavigate totalItemsCount={listCount} onChange={searchNoticeList} itemsCountPerPage={5} activePage={currentParam as number}></PageNavigate>
+            {modal ? (
+                <Protal>
+                    {/* <NoticeModal noticeSeq = {notiSeq} onSuccess = {postSuccess} handlerModal={handlerModal} setNoticeSeq = {setNotiSeq}></NoticeModal> */}
+                    <NoticeModal noticeSeq = {notiSeq} onSuccess={postSuccess} setNoticeSeq = {setNotiSeq}></NoticeModal>
+                </Protal>
+            ) : null}
         </>
     );
 };
