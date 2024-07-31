@@ -4,6 +4,7 @@ import { DashBoard } from '../component/layout/DashBoard/DashBoard';
 import { NotFound } from '../component/common/NotFound/NotFound';
 import { Children } from 'react';
 import { Notice } from '../pages/Notice';
+import { ComnCodMgr } from '../pages/ComnCodMgr';
 
 const routers: RouteObject[] = [
     { path: '*', element: <NotFound /> },
@@ -11,7 +12,10 @@ const routers: RouteObject[] = [
     {
         path: '/react',
         element: <DashBoard />,
-        children: [{path: 'system', children: [{path: 'notice.do', element: <Notice/>}]}],
+        children: [
+            {path: 'system', children: [{path: 'notice.do', element: <Notice/>}]},
+            {path: 'system', children: [{path:'comnCodMgr.do', element:<ComnCodMgr/>}]}
+        ],
     },
 ];
 
