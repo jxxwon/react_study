@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.accounting.dao.AccSlipDao">
+
+	<select id="accSlipList" resultType="map">
+	
+	  	SELECT 
+			a.acct_num,
+  			DATE_FORMAT(a.acct_date, '%Y-%m-%d') AS acct_date,
+			a.reso_num,
+			a.loginID,
+			a.acct_code,
+			a.onsite_cost,
+			b.appr_yn,
+			b.appr_date,
+			b.amount,
+			c.cust_person,
+			c.cust_name,
+			c.cust_memo,
+			c.cust_id,
+			d.book_date,
+			d.applyer
+	  FROM tb_acct_info a
+      left JOIN tb_disb_info b on a.reso_num = b.reso_num
+      left JOIN tb_cust_info c on c.cust_id = b.cust_id
+      left JOIN tb_estm_info d on d.cust_id = c.cust_id
+      <where>
+			<if test="(from_date != null) and (!from_date.equals('')) and (to_date != null) and (!to_date.equals(''))">
+				AND a.acct_date between STR_TO_DATE(#{from_date}, '%Y-%m-%d') and STR_TO_DATE(#{to_date}, '%Y-%m-%d') 
+        	 </if>  
+	         <if test ="(cust_name != null) and (!cust_name.equals(''))">
+				AND c.cust_name = #{cust_name}
+	         </if>
+	   </where>
+	        ORDER BY a.acct_num DESC
+			LIMIT #{pageIndex}, #{pageSize}
+	</select>
+
+
+	<select id="accSlipCnt" resultType="int">
+		SELECT COUNT(a.acct_num)
+      FROM tb_acct_info a
+      left JOIN tb_disb_info b on a.reso_num = b.reso_num
+      left JOIN tb_cust_info c on c.cust_id = b.cust_id
+      left JOIN tb_estm_info d on d.cust_id = c.cust_id
+		<where>
+		 <if test="(from_date != null) and (!from_date.equals('')) and (to_date != null) and (!to_date.equals(''))">
+				AND a.acct_date BETWEEN #{from_date} AND #{to_date}
+         </if>  
+         <if test ="(acc_cb != null) and (!acc_cb.equals(''))">
+				AND c.cust_name = #{cust_name}
+	     </if>
+		</where>
+	</select>
+	
+	
+	
+	<select id="accSlipModal" resultType="map">
+  SELECT 
+			a.acct_num,
+  			DATE_FORMAT(a.acct_date, '%Y-%m-%d') AS acct_date,
+			a.reso_num,
+			a.loginID,
+			a.acct_code,
+			a.onsite_cost,
+			b.appr_yn,
+			b.appr_date,
+			b.amount,
+			c.cust_person,
+			c.cust_name,
+			c.cust_memo,
+			c.cust_id,
+			d.book_date,
+			d.applyer
+	  FROM tb_acct_info a
+      left JOIN tb_disb_info b on a.reso_num = b.reso_num
+      left JOIN tb_cust_info c on c.cust_id = b.cust_id
+      left JOIN tb_estm_info d on d.cust_id = c.cust_id
+      <where>
+			<if test="(from_date != null) and (!from_date.equals('')) and (to_date != null) and (!to_date.equals(''))">
+				AND a.acct_date between STR_TO_DATE(#{from_date}, '%Y-%m-%d') and STR_TO_DATE(#{to_date}, '%Y-%m-%d') 
+        	 </if>  
+	         <if test ="(acc_cb != null) and (!acc_cb.equals(''))">
+				AND c.cust_name = #{cust_name}
+	         </if>
+	   </where>
+	        ORDER BY a.acct_num DESC
+	</select>
+	
+	
+</mapper>

@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.accounting.dao.DisbDao">
+	<select id="accGrpCodeList" resultType="kr.happyjob.study.system.model.ComnGrpCodModel">
+		SELECT 
+			group_code	AS grp_cod,
+			group_name	AS grp_cod_nm	
+		FROM 
+			tb_group_code
+		WHERE
+			group_code LIKE 'acc_%'
+		ORDER BY 
+			group_code DESC
+	</select>
+	
+	<select id="acctCodeList" resultType="kr.happyjob.study.system.model.ComnCodUtilModel">
+		SELECT 
+			detail_code	AS dtl_cod,
+			detail_name AS dtl_cod_nm
+		FROM 
+			tb_detail_code
+		WHERE
+			group_code = #{selectAccGrpCod}
+		ORDER BY 
+			detail_code ASC
+	</select>
+	
+	<insert id="saveDisb">
+		<selectKey resultType="int" keyProperty="resoNum" order="BEFORE">
+			SELECT IFNULL(max(reso_num), 0) + 1 FROM tb_disb_info
+		</selectKey>
+		INSERT INTO tb_disb_info
+		(
+			reso_num, loginID, acct_code, appl_date, use_date, 
+			disb_content, amount, appr_yn
+			<if test="(custId != null) and (!''.equals(custId))">
+				, cust_id
+			</if>
+			<if test="(apprDate != null) and (!''.equals(apprDate))">
+				, appr_date
+			</if>
+			<if test="'Y'.toString() eq fileYn">
+				, evi_material
+				, phsycal_path
+				, logical_path
+				, file_size
+				, file_ext
+			</if>
+		)
+		VALUES 
+		(
+			#{resoNum}, #{loginId}, #{selAcctCode}, #{applyDate}, #{useDate},
+			#{disbContent}, #{amount}, #{apprYn}
+			<if test="(custId != null) and (!''.equals(custId))">
+				, #{custId}
+			</if>
+			<if test="(apprDate != null) and (!''.equals(apprDate))">
+				, #{apprDate}
+			</if>
+			<if test="'Y'.toString() eq fileYn">
+				, #{fileInfo.file_nm}
+				, #{fileInfo.file_loc}
+				, #{fileInfo.vrfile_loc}
+				, #{fileInfo.file_size}
+				, #{fileInfo.fileExtension}
+			</if>
+		)
+	</insert>
+	
+	<select id="disbList" resultType="kr.happyjob.study.accounting.model.DisbInfoModel">
+		/* kr.happyjob.study.accounting.dao.DisbDao.disbList */
+		SELECT
+			tdi.reso_num		AS resoNum,
+			tdi.loginID			AS applyId,
+			tdc1.detail_name 	AS applyDept,
+			tdi.cust_id			AS custId,
+			tdc2.group_code		AS groupCode,
+			tgc.group_name		AS grCodeNm,
+			tdi.acct_code		AS acctCode,
+			tdc2.detail_name 	AS acctCodeNm,
+			tdi.appl_date		AS applyDate,
+			tdi.use_date		AS useDate,
+			tdi.disb_content	AS disbContent,
+			tdi.amount			AS amount,
+			tdi.appr_yn			AS apprYn,
+			tdi.appr_date		AS apprDate,
+			tdi.evi_material	AS eviMaterial
+		FROM
+			tb_disb_info AS tdi
+		LEFT JOIN tb_userinfo AS tu ON tdi.loginID = tu.loginID
+		LEFT JOIN tb_detail_code AS tdc1 ON tu.dept_code = tdc1.detail_code
+		LEFT JOIN tb_detail_code AS tdc2 ON tdi.acct_code = tdc2.detail_code
+		LEFT JOIN tb_group_code AS tgc ON tdc2.group_code = tgc.group_code
+		<where>
+			<if test="(loginId != null) and (!''.equals(loginId))">
+				tdi.loginID = #{loginId}
+			</if>
+			<if test="(searchAccGroupCode != null) and (!''.equals(searchAccGroupCode)) and (!'ALL'.equals(searchAccGroupCode))">
+				AND tdc2.group_code = #{searchAccGroupCode}
+			</if>
+			<if test="(searchAcctCode != null) and (!''.equals(searchAcctCode)) and (!'ALL'.equals(searchAcctCode))">
+				AND tdi.acct_code = #{searchAcctCode}
+			</if>
+			<if test="(searchApprYn != null) and (!''.equals(searchApprYn)) and (!'ALL'.equals(searchApprYn))">
+				AND tdi.appr_yn = #{searchApprYn}
+			</if>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND tdi.appl_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND tdi.appl_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+			</if>
+		</where>
+		ORDER BY
+			reso_num DESC
+			LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="disbListCnt" resultType="int">
+		/* kr.happyjob.study.accounting.dao.DisbDao.disbListCnt */
+		SELECT
+			count(*)
+		FROM
+			tb_disb_info AS tdi
+		LEFT JOIN tb_userinfo AS tu ON tdi.loginID = tu.loginID
+		LEFT JOIN tb_detail_code AS tdc1 ON tu.dept_code = tdc1.detail_code
+		LEFT JOIN tb_detail_code AS tdc2 ON tdi.acct_code = tdc2.detail_code
+		LEFT JOIN tb_group_code AS tgc ON tdc2.group_code = tgc.group_code
+		<where>
+			<if test="(loginId != null) and (!''.equals(loginId))">
+				tdi.loginID = #{loginId}
+			</if>
+			<if test="(searchAccGroupCode != null) and (!''.equals(searchAccGroupCode)) and (!'ALL'.equals(searchAccGroupCode))">
+				AND tdc2.group_code = #{searchAccGroupCode}
+			</if>
+			<if test="(searchAcctCode != null) and (!''.equals(searchAcctCode)) and (!'ALL'.equals(searchAcctCode))">
+				AND tdi.acct_code = #{searchAcctCode}
+			</if>
+			<if test="(searchApprYn != null) and (!''.equals(searchApprYn)) and (!'ALL'.equals(searchApprYn))">
+				AND tdi.appr_yn = #{searchApprYn}
+			</if>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND tdi.appl_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND tdi.appl_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+			</if>
+		</where>
+	</select>
+	
+	<select id="disbDetail" resultType="kr.happyjob.study.accounting.model.DisbInfoModel">
+		/* kr.happyjob.study.accounting.dao.DisbDao.disbDetail */
+		SELECT
+			tdi.reso_num		AS resoNum,
+			tdi.loginID			AS applyId,
+			tu.name 			AS applyName,
+			tdc1.detail_name 	AS applyDept,
+			tdi.cust_id			AS custId,
+			tci.cust_name		AS custName,
+			tdc2.group_code		AS groupCode,
+			tgc.group_name		AS grCodeNm,
+			tdi.acct_code		AS acctCode,
+			tdc2.detail_name 	AS acctCodeNm,
+			tdi.appl_date		AS applyDate,
+			tdi.use_date		AS useDate,
+			tdi.disb_content	AS disbContent,
+			tdi.amount			AS amount,
+			tdi.appr_yn			AS apprYn,
+			tdi.appr_date		AS apprDate,
+			tdi.evi_material	AS eviMaterial,
+			tdi.phsycal_path 	AS phsycalPath,
+			tdi.logical_path  	AS logicalPath,
+			tdi.file_size		AS fileSize,
+			tdi.file_ext 		AS fileExt
+		FROM
+			tb_disb_info AS tdi
+			LEFT JOIN tb_userinfo AS tu ON tdi.loginID = tu.loginID
+			LEFT JOIN tb_detail_code AS tdc1 ON tu.dept_code = tdc1.detail_code
+			LEFT JOIN tb_detail_code AS tdc2 ON tdi.acct_code = tdc2.detail_code
+			LEFT JOIN tb_group_code AS tgc ON tdc2.group_code = tgc.group_code
+			LEFT JOIN tb_cust_info AS tci ON tdi.cust_id = tci.cust_id	
+		WHERE
+			tdi.reso_num = #{resoNum}
+	</select>
+	
+	<delete id="deleteDisb">
+		DELETE FROM 
+			tb_disb_info
+		WHERE 
+			reso_num = #{resoNum}
+	</delete>
+	
+	<update id="updateDisb">
+		UPDATE
+			tb_disb_info
+		SET
+			appr_yn	= #{apprYn},
+			appr_date = #{apprDate}
+			<if test="(disbContent != null) and (!''.equals(disbContent))">
+			, disb_content = #{disbContent}
+			</if>
+		WHERE
+			reso_num = #{resoNum}
+	</update>
+</mapper>

@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.business.dao.SalesDao">
+	<select id="salePlanList" resultType="kr.happyjob.study.business.model.SalesModel">
+		SELECT
+			tpi.target_date,
+			tci.cust_name,
+			tii.manufac,
+			tii.major_class,
+			tii.sub_class,
+			tii.item_name,
+			tpi.goal_qut,
+			tpi.perform_qut,
+			tpi.plan_note,
+			tpi.loginID,
+			tpi.plan_num
+		FROM tb_plan_info tpi
+		LEFT OUTER JOIN tb_cust_info tci ON
+		    tpi.cust_id = tci.cust_id
+		LEFT OUTER JOIN tb_item_info tii ON
+		    tpi.item_code = tii.item_code
+		<where>
+			<if test="(searchManufac != null) and (!''.equals(searchManufac))">
+				AND tii.manufac = #{searchManufac}
+			</if>
+			
+			<if test="(searchMajor != null) and (!''.equals(searchMajor))">
+				AND tii.major_class = #{searchMajor}
+			</if>
+			<if test="(searchSub != null) and (!''.equals(searchSub))">
+				AND tii.sub_class = #{searchSub}
+			</if>		
+			<if test = "(searchItemName != null) and (!''.equals(searchItemName))">
+				AND tii.item_name LIKE CONCAT('%', #{searchItemName}, '%')
+			</if>
+			<if test="(searchDate != null) and (!''.equals(searchDate))">
+				AND tpi.target_date = #{searchDate}
+			</if>
+			AND tpi.loginID = #{loginID}
+		</where>
+		ORDER BY tpi.target_date
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="salePlanListCnt" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM tb_plan_info tpi
+		LEFT OUTER JOIN tb_cust_info tci ON
+		    tpi.cust_id = tci.cust_id
+		LEFT OUTER JOIN tb_item_info tii ON
+		    tpi.item_code = tii.item_code
+		<where>			
+			<if test="(searchManufac != null) and (!''.equals(searchManufac))">
+				AND tii.manufac = #{searchManufac}
+			</if>
+			
+			<if test="(searchMajor != null) and (!''.equals(searchMajor))">
+				AND tii.major_class = #{searchMajor}
+			</if>
+			<if test="(searchSub != null) and (!''.equals(searchSub))">
+				AND tii.sub_class = #{searchSub}
+			</if>		
+			<if test = "(searchItemName != null) and (!''.equals(searchItemName))">
+				AND tii.item_name LIKE CONCAT('%', #{searchItemName}, '%')
+			</if>
+			<if test="(searchDate != null) and (!''.equals(searchDate))">
+				AND tpi.target_date = #{searchDate}
+			</if>
+			AND tpi.loginID = #{loginID}
+		</where>
+	</select>
+	
+	<select id="searchName" resultType="kr.happyjob.study.business.model.SalesFindNameModel">
+		SELECT
+			name
+		FROM
+			tb_userinfo
+		WHERE
+			loginID = #{loginID}
+	</select>
+	
+	<select id="searchList" resultType="kr.happyjob.study.business.model.SalesItemModel">
+		SELECT
+			DISTINCT manufac
+		FROM
+			tb_item_info
+		WHERE
+			manufac IS NOT NULL
+	</select>
+	
+	<select id="custNameList" resultType="kr.happyjob.study.business.model.SalesModel">
+		SELECT 
+			cust_id,
+			cust_name
+    	FROM 
+    		tb_cust_info
+    	ORDER BY
+    		cust_name
+	</select>
+	
+	<select id="getMajorClasses" resultType="kr.happyjob.study.business.model.SalesItemModel">
+		SELECT 
+			DISTINCT major_class
+    	FROM 
+    		tb_item_info
+    	WHERE 
+    		manufac = #{manufac}
+	</select>
+	
+	<select id="getSubClasses" resultType="kr.happyjob.study.business.model.SalesItemModel">
+		SELECT
+			DISTINCT sub_class
+    	FROM 
+    		tb_item_info
+    	WHERE 
+    		manufac = #{manufac}
+      		AND major_class = #{major_class}
+	</select>
+	
+	<select id="getItemNameClasses" resultType="kr.happyjob.study.business.model.SalesItemModel">
+		SELECT
+			DISTINCT item_name,
+			item_code
+    	FROM 
+    		tb_item_info
+    	WHERE 
+    		manufac = #{manufac}
+      		AND major_class = #{major_class}
+      		AND sub_class = #{sub_class}
+	</select>
+	
+	<select id="salePlanDetail" resultType="kr.happyjob.study.business.model.SalesModel">
+		SELECT 
+			tpi.target_date,
+			tci.cust_name,
+			tii.manufac,
+			tii.major_class,
+			tii.sub_class,
+			tii.item_name,
+			tpi.goal_qut,
+			tpi.perform_qut,
+			tpi.plan_note,
+			tpi.loginID,
+			tu.name,
+			tpi.plan_num,
+			tpi.cust_id,
+			tpi.item_code
+		FROM tb_plan_info tpi
+		LEFT OUTER JOIN tb_cust_info tci ON
+		    tpi.cust_id = tci.cust_id
+		LEFT OUTER JOIN tb_item_info tii ON
+		    tpi.item_code = tii.item_code
+		LEFT OUTER JOIN tb_userinfo tu ON
+		    tpi.loginID = tu.loginID 
+		WHERE plan_num = #{detailPlanNum}
+	</select>
+	
+	<insert id="salePlanSave" parameterType="kr.happyjob.study.business.model.SalesModel">
+		<selectKey resultType="int" keyProperty="plan_num" order="BEFORE">
+			SELECT COALESCE(max(plan_num), 0) + 1 AS plan_num
+			FROM tb_plan_info
+		</selectKey>
+		INSERT INTO tb_plan_info
+			(
+				plan_num,
+				loginID,
+				cust_id,
+				item_code,
+				target_date,
+				goal_qut,
+				perform_qut,
+				plan_note				
+			)
+		VALUES
+			(
+				#{plan_num},
+				#{loginID},
+				#{cust_id},
+				#{item_code},
+				#{target_date},
+				#{goal_qut},
+				#{perform_qut},
+				#{plan_note}			
+			)
+	</insert>
+	
+	<update id="updateSalePlan">
+		UPDATE tb_plan_info
+		SET
+			cust_id = #{cust_id},
+			item_code = #{item_code},
+			target_date = #{target_date},
+			goal_qut = #{goal_qut},
+			perform_qut = #{perform_qut},
+			plan_note = #{plan_note}
+		WHERE plan_num = #{detailPlanNum}
+	</update>
+	
+	<delete id="deleteSalePlan">
+		DELETE FROM tb_plan_info
+		WHERE plan_num = #{detailPlanNum}
+	</delete>
+	
+	
+	
+	<select id="saleInfoList" resultType="kr.happyjob.study.business.model.SalesModel">
+		SELECT
+			tpi.loginID,
+			tu.name,
+			tpi.target_date,
+			tii.manufac,
+			tii.major_class,
+			tii.sub_class,
+			tii.item_code,
+			tii.item_name,
+			tpi.goal_qut,
+			tpi.perform_qut,
+			tpi.plan_note,
+			tpi.plan_num			
+		FROM tb_plan_info tpi
+		LEFT OUTER JOIN tb_item_info tii ON
+		    tpi.item_code = tii.item_code
+		LEFT OUTER JOIN tb_userinfo tu ON
+		    tpi.loginID = tu.loginID
+		<where>
+			<if test="(searchloginID != null) and (!''.equals(searchloginID))">
+				AND tpi.loginID LIKE CONCAT('%', #{searchloginID}, '%')
+			</if>
+			<if test="(searchManufac != null) and (!''.equals(searchManufac))">
+				AND tii.manufac = #{searchManufac}
+			</if>
+			<if test="(searchDate != null) and (!''.equals(searchDate))">
+				AND tpi.target_date = #{searchDate}
+			</if>
+			
+			<if test="(searchMajor != null) and (!''.equals(searchMajor))">
+				AND tii.major_class = #{searchMajor}
+			</if>
+			<if test="(searchSub != null) and (!''.equals(searchSub))">
+				AND tii.sub_class = #{searchSub}
+			</if>		
+			<if test = "(searchItemName != null) and (!''.equals(searchItemName))">
+				AND tii.item_name LIKE CONCAT('%', #{searchItemName}, '%')
+			</if>
+		</where>
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="saleInfoListCnt" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM tb_plan_info tpi
+		LEFT OUTER JOIN tb_item_info tii ON
+		    tpi.item_code = tii.item_code
+		LEFT OUTER JOIN tb_userinfo tu ON
+		    tpi.loginID = tu.loginID
+		<where>			
+			<if test="(searchloginID != null) and (!''.equals(searchloginID))">
+				AND tpi.loginID LIKE CONCAT('%', #{searchloginID}, '%')
+			</if>
+			<if test="(searchManufac != null) and (!''.equals(searchManufac))">
+				AND tii.manufac = #{searchManufac}
+			</if>
+			<if test="(searchDate != null) and (!''.equals(searchDate))">
+				AND tpi.target_date = #{searchDate}
+			</if>
+			
+			<if test="(searchMajor != null) and (!''.equals(searchMajor))">
+				AND tii.major_class = #{searchMajor}
+			</if>
+			<if test="(searchSub != null) and (!''.equals(searchSub))">
+				AND tii.sub_class = #{searchSub}
+			</if>		
+			<if test = "(searchItemName != null) and (!''.equals(searchItemName))">
+				AND tii.item_name LIKE CONCAT('%', #{searchItemName}, '%')
+			</if>
+		</where>
+	</select>
+	
+		
+</mapper>

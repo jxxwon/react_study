@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+
+<!-- 맵퍼네임 -->
+<mapper namespace="kr.happyjob.study.business.dao.EstMngDao">
+
+
+
+
+
+	<!-- 1.  견적 테이블 목록 조회 -->
+	<select id="estList" resultType="kr.happyjob.study.business.model.EstMngModel" parameterType ="hashmap" >
+		SELECT   	    a.estm_num
+					   ,DATE_FORMAT(a.estm_date, '%Y-%m-%d') AS estm_date
+					   ,a.apply_yn
+					   ,b.cust_id
+					   ,b.cust_name
+					   ,c.item_code
+					   ,c.item_name
+					   ,c.provide_value
+					   ,c.item_surtax
+					   ,c.item_price
+		FROM tb_estm_info a
+        inner join 	tb_cust_info b ON a.cust_id = b.cust_id
+        inner join  tb_estm_detail d on d.estm_num = a.estm_num 
+        inner join  tb_item_info c ON d.item_code = c.item_code
+		
+	 <where>
+         <if test="(client_search != null) and (!client_search.equals(''))">
+             AND b.cust_name LIKE CONCAT('%', #{client_search}, '%')
+         </if>
+         <if test="(from_date != null) and (! from_date.equals(''))">
+  			 AND a.estm_date  <![CDATA[>=]]> #{from_date}
+         </if>
+         <if test="(to_date != null) and (!to_date.equals(''))">
+         	AND a.estm_date  <![CDATA[<=]]> #{to_date}
+         </if>         
+      </where>
+		ORDER BY a.estm_num
+		LIMIT #{pageIndex}, #{pageSize}
+	</select>
+	
+	
+
+<!-- 2. 전체 목록 카운트  -->
+	<select id="estCnt" resultType="int"  parameterType="hashmap">
+		 
+		SELECT  COUNT(a.estm_num)
+					
+		FROM tb_estm_info a <!-- 견적서 테이블 a  -->
+        inner join tb_cust_info b ON a.cust_id = b.cust_id     	<!--  거래처 테이블 b . 거래처 이름 가져올려고 조인: 검색조건 -->
+        inner join tb_estm_detail d ON d.estm_num = a.estm_num	<!--  견적서상세정보 테이블 d .  상품 코드 가져올려고 조인 -->
+        inner join tb_item_info c ON d.item_code = c.item_code	<!--  견적서 제품 정보 테이블. 상품 코드 가져올려고 조인 -->
+	
+	<where>
+         <if test="(client_search != null) and (! client_search.equals(''))">
+             AND b.cust_name LIKE CONCAT('%', #{client_search}, '%')
+         </if>
+         <if test="(from_date != null) and (! from_date.equals(''))">
+  			and a.estm_date  <![CDATA[>=]]> STR_TO_DATE(#{from_date}, '%Y-%m-%d')   
+         </if>
+         <if test="(to_date != null) and (!to_date.equals(''))">
+         and a.estm_date  <![CDATA[<=]]> STR_TO_DATE(#{to_date}, '%Y-%m-%d')   
+         </if>         
+      </where>
+		ORDER BY a.estm_num
+</select>
+	
+	
+	<!-- 3. 단건조회  -->
+	<select id ="selectEstList"  resultType ="kr.happyjob.study.business.model.EstMngModel" >
+
+			SELECT a.estm_num
+					   ,a.cust_id
+					   ,a.estm_date
+					   ,a.apply_yn
+					   ,b.qut
+					   ,d.cust_name
+					   ,d.cust_person
+					   ,d.cust_person_ph
+					   ,d.cust_addr
+					   ,d.cust_detail_addr
+					   ,d.biz_num
+					   ,c.item_surtax
+					   ,c.provide_value
+					   ,c.item_price
+					   ,c.item_name
+					   
+			FROM tb_estm_info a 
+			INNER JOIN tb_estm_detail b ON a.estm_num = b.estm_num
+			INNER JOIN tb_item_info c ON b.item_code = c.item_code
+			INNER JOIN tb_cust_info d ON a.cust_id = d.cust_id
+			WHERE a.estm_num = #{estm_num}
+			
+	</select>	
+	
+	
+	
+	<!-- !!! 견적서 테이블 +  견적서 제품 테이블 인서트 -->
+	<!-- 견적서테이블 -->
+	<insert id="insertEstList" >
+		<selectKey resultType="int" keyProperty="estm_num" order="BEFORE">
+			SELECT IFNULL(max(estm_num), 0) + 1 FROM tb_estm_info
+		</selectKey>
+		
+		INSERT INTO tb_estm_info
+		(
+			expire_date,
+			book_date,
+			estm_num,
+			loginID,
+			cust_id,
+			estm_date
+		) values (
+			#{expire_date},
+			#{book_date},
+			#{estm_num},
+			#{loginID},
+			(SELECT cust_id
+					FROM tb_cust_info 
+					WHERE cust_name = #{client_search1}),
+			now()
+		)
+	</insert>
+
+
+		<!-- 견적서제품 테이블 인서트 -->
+		<insert id ="updateInsertEstList">
+					   INSERT INTO tb_estm_detail (
+										  estm_num
+										, item_code
+										, qut
+																	 )
+					
+						VALUES(			
+										  #{estm_num}
+										, (SELECT item_code 
+											FROM tb_item_info 
+											WHERE item_name = #{item_name}) <!--  품목코드 가져오기 -->
+										, #{qut}
+									)
+		
+		</insert>
+	
+	<!-- 견적서테이블 승인여부 인서트 -->
+	<update id="insertApplyYn" >
+		
+		UPDATE tb_estm_info
+		SET apply_yn = #{apply_yn},
+			applyer = #{applyer},
+			apply_date = now()
+		<where>
+		estm_num = #{estm_num}  
+		</where>
+	</update>
+
+
+	<!-- 5.단건삭제 -->
+	<delete id="deleteEstList">
+			DELETE FROM tb_estm_info
+			WHERE estm_num = #{estm_num}
+	</delete>
+	
+
+	<!-- 6. 모달 안 리스트 뿌리기  -->
+	<select id="estListDetail" resultType="kr.happyjob.study.business.model.EstMngModel" parameterType ="hashmap" >
+		SELECT    a.estm_num
+					   ,a.estm_date
+					   ,c.item_code
+					   ,c.item_name
+				   	   ,c.item_price
+					   ,c.item_surtax
+					   ,c.provide_value
+					   ,d.cust_id
+		     	   	   ,b.qut
+		FROM tb_estm_info a <!-- 견적서 테이블 a  -->
+        INNER JOIN tb_estm_detail b ON a.estm_num = b.estm_num 
+        INNER JOIN tb_item_info c ON c.item_code = b.item_code 
+        INNER JOIN tb_cust_info d ON d.cust_id = a.cust_id
+	
+		WHERE a.estm_num = #{estm_num}
+
+	</select>
+	
+	<!-- 7.모달 안 리스트 뿌리기 카운트  -->
+	<select id="estDetailCnt" resultType="int"  parameterType="hashmap">
+
+		SELECT  COUNT(a.estm_num)
+					
+		FROM tb_estm_info a <!-- 견적서 테이블 a  -->
+        INNER JOIN tb_estm_detail b ON a.estm_num = b.estm_num 
+        INNER JOIN tb_item_info c ON c.item_code = b.item_code 
+        INNER JOIN tb_cust_info d ON d.cust_id = a.cust_id
+		
+		WHERE a.estm_num = #{estm_num}
+   </select>
+	
+	
+	
+	
+</mapper>

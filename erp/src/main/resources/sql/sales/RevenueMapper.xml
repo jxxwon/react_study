@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.sales.dao.RevenueDao">
+	<select id="searchDaily" resultType="kr.happyjob.study.sales.model.RevenueDailyModel">
+		(
+			SELECT
+				estm.book_date AS bookDate,
+				estm.cust_id AS custId,
+				cust.cust_name AS custName,
+				estm.amount,
+		    	0 AS payAmount,
+				estm.unpaid_state AS unpaidState
+			FROM tb_estm_info estm
+			LEFT JOIN tb_cust_info cust ON cust.cust_id = estm.cust_id
+			WHERE estm.apply_yn = 'Y'
+			<if test="(date != null) and (!''.equals(date))">
+				AND DATEDIFF(estm.book_date, STR_TO_DATE(#{date}, '%Y-%m-%d')) = 0
+			</if>
+			<if test="(account != null) and (!''.equals(account))">
+				AND cust.cust_name LIKE CONCAT('%', #{account}, '%')
+			</if>
+		) UNION ALL (
+			SELECT
+		    	date_format(ob.obtain_date, '%Y-%m-%d') AS bookDate,
+				cu.cust_id AS custId,
+				cu.cust_name AS custName,
+				(ob.obtain_count * it.item_price) AS amount,
+		    	0 AS payAmount,
+				ob.deposityn AS unpaidState
+			FROM tb_obtain ob
+			LEFT JOIN tb_cust_info cu ON cu.cust_id = ob.cust_id
+			LEFT JOIN tb_item_info it ON it.item_code = ob.item_code
+			WHERE ob.returnyn = 'N'
+			<if test="(date != null) and (!''.equals(date))">
+				AND DATEDIFF(ob.obtain_date, STR_TO_DATE(#{date}, '%Y-%m-%d')) = 0
+			</if>
+			<if test="(account != null) and (!''.equals(account))">
+				AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+			</if>
+		) UNION ALL (
+			SELECT
+		    	date_format(od.order_date, '%Y-%m-%d') AS bookDate,
+				cu.cust_id AS custId,
+				cu.cust_name AS custName,
+				0 AS amount,
+		    	(od.order_count * it.provide_value) AS payAmount,
+				od.deposityn AS unpaidState
+			FROM tb_order od
+			LEFT JOIN tb_cust_info cu ON cu.cust_id = od.company_seq
+			LEFT JOIN tb_item_info it ON it.item_code = od.item_code
+			WHERE od.signYN = 'Y'
+			<if test="(date != null) and (!''.equals(date))">
+				AND DATEDIFF(od.order_date, STR_TO_DATE(#{date}, '%Y-%m-%d')) = 0
+			</if>
+			<if test="(account != null) and (!''.equals(account))">
+				AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+			</if>
+		)
+		ORDER BY bookDate DESC
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="searchDailyTotalCount" resultType="int">
+		SELECT
+			COUNT(n.bookDate)
+		FROM 
+		(
+			(
+				SELECT
+					estm.book_date AS bookDate
+				FROM tb_estm_info estm
+				LEFT JOIN tb_cust_info cust ON cust.cust_id = estm.cust_id
+				WHERE estm.apply_yn = 'Y'
+				<if test="(date != null) and (!''.equals(date))">
+					AND DATEDIFF(estm.book_date, STR_TO_DATE(#{date}, '%Y-%m-%d')) = 0
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cust.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			) UNION ALL (
+				SELECT
+			    	date_format(ob.obtain_date, '%Y-%m-%d') AS bookDate
+				FROM tb_obtain ob
+				LEFT JOIN tb_cust_info cu ON cu.cust_id = ob.cust_id
+				LEFT JOIN tb_item_info it ON it.item_code = ob.item_code
+				WHERE ob.returnyn = 'N'
+				<if test="(date != null) and (!''.equals(date))">
+					AND DATEDIFF(ob.obtain_date, STR_TO_DATE(#{date}, '%Y-%m-%d')) = 0
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			) UNION ALL (
+				SELECT
+			    	date_format(od.order_date, '%Y-%m-%d') AS bookDate
+				FROM tb_order od
+				LEFT JOIN tb_cust_info cu ON cu.cust_id = od.company_seq
+				LEFT JOIN tb_item_info it ON it.item_code = od.item_code
+				WHERE od.signYN = 'Y'
+				<if test="(date != null) and (!''.equals(date))">
+					AND DATEDIFF(od.order_date, STR_TO_DATE(#{date}, '%Y-%m-%d')) = 0
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			)
+		) AS n
+	</select>
+	
+	<select id="searchRevenue" resultType="kr.happyjob.study.sales.model.RevenueModel">
+		SELECT
+			n.bookDate,
+			SUM(n.amount) AS amount,
+			SUM(n.payAmount) AS payAmount,
+			SUM(n.unpaidAmount) AS unpaidAmount
+		FROM
+		(
+			(
+				SELECT
+			    	<if test='isMonthly != null and "Y".equalsIgnoreCase(isMonthly)'>
+						DATE_FORMAT(estm.book_date, '%Y-%m') AS bookDate,
+					</if>
+					<if test='isMonthly != null and "N".equalsIgnoreCase(isMonthly)'>
+						DATE_FORMAT(estm.book_date, '%Y') AS bookDate,
+					</if>
+			    	estm.amount,
+			    	0 AS payAmount,
+			    	CASE estm.unpaid_state WHEN 'N' THEN estm.amount ELSE 0 END AS unpaidAmount
+			    FROM tb_estm_info estm
+			    LEFT JOIN tb_cust_info cust ON cust.cust_id = estm.cust_id
+			    WHERE estm.apply_yn = 'Y'
+			    <if test="(endDate != null) and (!''.equals(endDate))">
+					AND estm.book_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test="(startDate != null) and (!''.equals(startDate))">
+		    		AND estm.book_date <![CDATA[>]]> DATE_SUB(STR_TO_DATE(#{startDate}, '%Y-%m-%d'), INTERVAL 5 MONTH)
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cust.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			) UNION ALL (
+			    SELECT
+			    	<if test='isMonthly != null and "Y".equalsIgnoreCase(isMonthly)'>
+						DATE_FORMAT(ob.obtain_date, '%Y-%m') AS bookDate,
+					</if>
+					<if test='isMonthly != null and "N".equalsIgnoreCase(isMonthly)'>
+						DATE_FORMAT(ob.obtain_date, '%Y') AS bookDate,
+					</if>
+			  		(ob.obtain_count * it.item_price) AS amount,
+			    	0 AS payAmount,
+			    	CASE ob.deposityn WHEN 'N' THEN ob.obtain_count * it.item_price ELSE 0 END AS unpaidAmount
+			  	FROM tb_obtain ob
+			  	LEFT JOIN tb_cust_info cu ON cu.cust_id = ob.cust_id
+			  	LEFT JOIN tb_item_info it ON it.item_code = ob.item_code
+			  	WHERE ob.returnyn = 'N'
+			    <if test="(endDate != null) and (!''.equals(endDate))">
+					AND ob.obtain_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test="(startDate != null) and (!''.equals(startDate))">
+		    		AND ob.obtain_date <![CDATA[>]]> DATE_SUB(STR_TO_DATE(#{startDate}, '%Y-%m-%d'), INTERVAL 5 MONTH)
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			) UNION ALL (
+			    SELECT
+			    	<if test='isMonthly != null and "Y".equalsIgnoreCase(isMonthly)'>
+						DATE_FORMAT(od.order_date, '%Y-%m') AS bookDate,
+					</if>
+					<if test='isMonthly != null and "N".equalsIgnoreCase(isMonthly)'>
+						DATE_FORMAT(od.order_date, '%Y') AS bookDate,
+					</if>
+			  		0 AS amount,
+			        (od.order_count * it.provide_value) AS payAmount,
+			  		0 AS unpaidAmount
+			  	FROM tb_order od
+			  	LEFT JOIN tb_cust_info cu ON cu.cust_id = od.company_seq
+			  	LEFT JOIN tb_item_info it ON it.item_code = od.item_code
+			  	WHERE od.signYN = 'Y'
+				<if test="(endDate != null) and (!''.equals(endDate))">
+					AND od.order_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test="(startDate != null) and (!''.equals(startDate))">
+		    		AND od.order_date <![CDATA[>]]> DATE_SUB(STR_TO_DATE(#{startDate}, '%Y-%m-%d'), INTERVAL 5 MONTH)
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+		    )
+		) AS n
+		GROUP BY bookDate
+		ORDER BY bookDate DESC
+	</select>
+	
+	<select id="searchTopItem" resultType="kr.happyjob.study.sales.model.TopRevenueModel">
+		SELECT
+			n.name,
+			SUM(n.amount) AS amount
+		FROM
+		(
+			(
+				SELECT 
+		    		item.item_name AS name,
+		    		SUM(detail.qut * item.item_price) AS amount
+		    	FROM tb_estm_info estm
+		    	LEFT JOIN tb_cust_info cust ON cust.cust_id = estm.cust_id
+			    LEFT JOIN tb_estm_detail detail ON detail.estm_num = estm.estm_num
+			    LEFT JOIN tb_item_info item ON item.item_code = detail.item_code
+			    WHERE estm.apply_yn = 'Y'
+	    		<if test="(endDate != null) and (!''.equals(endDate))">
+					AND estm.book_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test="(startDate != null) and (!''.equals(startDate))">
+		    		AND estm.book_date <![CDATA[>]]> DATE_SUB(STR_TO_DATE(#{startDate}, '%Y-%m-%d'), INTERVAL 5 MONTH)
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cust.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			) UNION ALL (
+			    SELECT
+				    it.item_name AS name,
+					(ob.obtain_count * it.item_price) AS amount
+				FROM tb_obtain ob
+				LEFT JOIN tb_cust_info cu ON cu.cust_id = ob.cust_id
+				LEFT JOIN tb_item_info it ON it.item_code = ob.item_code
+				WHERE ob.returnyn = 'N'
+	    		<if test="(endDate != null) and (!''.equals(endDate))">
+					AND ob.obtain_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test="(startDate != null) and (!''.equals(startDate))">
+		    		AND ob.obtain_date <![CDATA[>]]> DATE_SUB(STR_TO_DATE(#{startDate}, '%Y-%m-%d'), INTERVAL 5 MONTH)
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			)
+		) AS n
+	    WHERE name IS NOT NULL 
+		GROUP BY name
+		ORDER BY amount DESC
+		LIMIT 0, 5
+	</select>
+	
+	<select id="searchTopCust" resultType="kr.happyjob.study.sales.model.TopRevenueModel">
+		SELECT
+			n.name,
+			SUM(n.amount) AS amount
+		FROM
+		(
+			(
+				SELECT 
+		    		cust.cust_name AS name,
+		    		SUM(detail.qut * item.item_price) AS amount
+		    	FROM tb_estm_info estm
+			    LEFT JOIN tb_cust_info cust ON cust.cust_id = estm.cust_id
+			    LEFT JOIN tb_estm_detail detail ON detail.estm_num = estm.estm_num
+			    LEFT JOIN tb_item_info item ON item.item_code = detail.item_code
+			    WHERE estm.apply_yn = 'Y'
+				<if test="(endDate != null) and (!''.equals(endDate))">
+					AND estm.book_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test="(startDate != null) and (!''.equals(startDate))">
+		    		AND estm.book_date <![CDATA[>]]> DATE_SUB(STR_TO_DATE(#{startDate}, '%Y-%m-%d'), INTERVAL 5 MONTH)
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cust.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			) UNION ALL (
+			    SELECT
+				    cu.cust_name AS name,
+					(ob.obtain_count * it.item_price) AS amount
+				FROM tb_obtain ob
+				LEFT JOIN tb_cust_info cu ON cu.cust_id = ob.cust_id
+				LEFT JOIN tb_item_info it ON it.item_code = ob.item_code
+				WHERE ob.returnyn = 'N'
+	    		<if test="(endDate != null) and (!''.equals(endDate))">
+					AND ob.obtain_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test="(startDate != null) and (!''.equals(startDate))">
+		    		AND ob.obtain_date <![CDATA[>]]> DATE_SUB(STR_TO_DATE(#{startDate}, '%Y-%m-%d'), INTERVAL 5 MONTH)
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			)
+		) AS n
+		WHERE name IS NOT NULL
+		GROUP BY name
+		ORDER BY amount DESC
+		LIMIT 0, 5
+	</select>
+</mapper>

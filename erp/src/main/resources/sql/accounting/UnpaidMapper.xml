@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.accounting.dao.UnpaidDao">
+	<select id="search" resultType="kr.happyjob.study.accounting.model.UnpaidModel">
+		<if test="!'obtain'.equals(processObject)">
+			(
+				SELECT 
+				    'estm' AS type,
+					estm.estm_num AS num,
+					ui.name AS userName,
+					cust.cust_name AS custName,
+					date_format(estm.book_date, '%Y-%m-%d') AS bookDate,
+					estm.amount,
+					estm.unpaid_state AS unpaidState,
+					estm.expire_state AS expireState
+				FROM tb_estm_info estm
+				LEFT JOIN tb_cust_info cust ON cust.cust_id = estm.cust_id
+				LEFT JOIN tb_userinfo ui ON ui.loginID = estm.loginID
+				LEFT JOIN tb_estm_detail detail ON detail.estm_num = estm.estm_num
+				LEFT JOIN tb_item_info item ON item.item_code = detail.item_code
+				WHERE estm.apply_yn = 'Y'
+				<if test="(startDate != null) and (!''.equals(startDate))">
+					AND estm.book_date <![CDATA[>=]]> STR_TO_DATE(#{startDate}, '%Y-%m-%d')
+				</if>
+				<if test="(endDate != null) and (!''.equals(endDate))">
+					AND estm.book_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test='"Y".equalsIgnoreCase(expireState) or "N".equalsIgnoreCase(expireState)'>
+					AND (expire_state = #{expireState} OR expire_state IS NULL)
+				</if>
+				<if test='"Y".equalsIgnoreCase(paidState) or "N".equalsIgnoreCase(paidState)'>
+					AND unpaid_state = #{paidState}
+				</if>
+				<if test="(product != null) and (!''.equals(product))">
+					AND item.item_name = #{product}
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cust.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+				GROUP BY estm.estm_num
+			)
+		</if>
+		<if test="!'estm'.equals(processObject) and !'obtain'.equals(processObject)">
+			UNION
+		</if>
+		<if test="!'estm'.equals(processObject)">
+			(
+				SELECT
+				    'obtain' AS type,
+					ob.seq AS num,
+					cu.cust_person AS userName,
+					cu.cust_name AS custName,
+					date_format(ob.obtain_date, '%Y-%m-%d') AS bookDate,
+					(ob.obtain_count * it.item_price) AS amount,
+					ob.deposityn AS unpaidState,
+				    if(DATEDIFF(ob.delivery_date, now()) <![CDATA[<=]]> 0, 'Y', 'N') AS expireState
+				FROM tb_obtain ob
+				LEFT JOIN tb_cust_info cu ON cu.cust_id = ob.cust_id
+				LEFT JOIN tb_item_info it ON it.item_code = ob.item_code
+				WHERE ob.returnyn = 'N'
+				<if test="(startDate != null) and (!''.equals(startDate))">
+					AND ob.obtain_date <![CDATA[>=]]> STR_TO_DATE(#{startDate}, '%Y-%m-%d')
+				</if>
+				<if test="(endDate != null) and (!''.equals(endDate))">
+					AND ob.obtain_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test='"Y".equalsIgnoreCase(expireState)'>
+					AND (ob.delivery_date <![CDATA[<=]]> now())
+				</if>
+				<if test='"N".equalsIgnoreCase(expireState)'>
+					AND (ob.delivery_date <![CDATA[>]]> now())
+				</if>
+				<if test='"Y".equalsIgnoreCase(paidState) or "N".equalsIgnoreCase(paidState)'>
+					AND ob.deposityn = #{paidState}
+				</if>
+				<if test="(product != null) and (!''.equals(product))">
+					AND it.item_name = #{product}
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			)
+		</if>
+		ORDER BY bookDate DESC
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="searchTotalCount" resultType="int">
+		SELECT 
+			COUNT(num) 
+		FROM 
+		(
+			<if test="!'obtain'.equals(processObject)">
+			(
+				SELECT 
+					estm.estm_num AS num
+				FROM tb_estm_info estm
+				LEFT JOIN tb_cust_info cust ON cust.cust_id = estm.cust_id
+				LEFT JOIN tb_userinfo ui ON ui.loginID = estm.loginID
+				LEFT JOIN tb_estm_detail detail ON detail.estm_num = estm.estm_num
+				LEFT JOIN tb_item_info item ON item.item_code = detail.item_code
+				WHERE estm.apply_yn = 'Y'
+				<if test="(startDate != null) and (!''.equals(startDate))">
+					AND estm.book_date <![CDATA[>=]]> STR_TO_DATE(#{startDate}, '%Y-%m-%d')
+				</if>
+				<if test="(endDate != null) and (!''.equals(endDate))">
+					AND estm.book_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test='"Y".equalsIgnoreCase(expireState) or "N".equalsIgnoreCase(expireState)'>
+					AND (expire_state = #{expireState} OR expire_state IS NULL)
+				</if>
+				<if test='"Y".equalsIgnoreCase(paidState) or "N".equalsIgnoreCase(paidState)'>
+					AND unpaid_state = #{paidState}
+				</if>
+				<if test="(product != null) and (!''.equals(product))">
+					AND item.item_name = #{product}
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cust.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+				GROUP BY estm.estm_num
+			)
+			</if>
+			<if test="!'estm'.equals(processObject) and !'obtain'.equals(processObject)">
+				UNION
+			</if>
+			<if test="!'estm'.equals(processObject)">
+			(
+				SELECT
+					ob.seq AS num
+				FROM tb_obtain ob
+				LEFT JOIN tb_cust_info cu ON cu.cust_id = ob.cust_id
+				LEFT JOIN tb_item_info it ON it.item_code = ob.item_code
+				WHERE ob.returnyn = 'N'
+				<if test="(startDate != null) and (!''.equals(startDate))">
+					AND ob.obtain_date <![CDATA[>=]]> STR_TO_DATE(#{startDate}, '%Y-%m-%d')
+				</if>
+				<if test="(endDate != null) and (!''.equals(endDate))">
+					AND ob.obtain_date <![CDATA[<=]]> STR_TO_DATE(#{endDate}, '%Y-%m-%d')
+				</if>
+				<if test='"Y".equalsIgnoreCase(expireState)'>
+					AND (ob.delivery_date <![CDATA[<=]]> now())
+				</if>
+				<if test='"N".equalsIgnoreCase(expireState)'>
+					AND (ob.delivery_date <![CDATA[>]]> now())
+				</if>
+				<if test='"Y".equalsIgnoreCase(paidState) or "N".equalsIgnoreCase(paidState)'>
+					AND ob.deposityn = #{paidState}
+				</if>
+				<if test="(product != null) and (!''.equals(product))">
+					AND it.item_name = #{product}
+				</if>
+				<if test="(account != null) and (!''.equals(account))">
+					AND cu.cust_name LIKE CONCAT('%', #{account}, '%')
+				</if>
+			)
+			</if>
+		) AS n
+	</select>
+	
+	<select id="searchEstmDetail" resultType="kr.happyjob.study.accounting.model.UnpaidDetailModel">
+		SELECT
+			estm.estm_num AS num,
+			date_format(estm.book_date, '%Y-%m-%d') AS bookDate,
+			estm.unpaid_state AS unpaidState,
+			estm.amount,
+			cust.cust_name AS custName,
+			cust.cust_person AS custPerson,
+			cust.cust_person_ph AS custPersonPh,
+			dc.detail_name AS bankName,
+			cust.cust_account AS custAccount,
+			ui.name AS userName,
+			estm.expire_state AS expireState,
+			date_format(estm.expire_date, '%Y-%m-%d') AS expireDate
+		FROM tb_estm_info estm
+		LEFT JOIN tb_cust_info cust ON cust.cust_id = estm.cust_id
+		LEFT JOIN tb_userinfo ui ON ui.loginID = estm.loginID
+		LEFT JOIN tb_detail_code dc ON dc.detail_code = cust.bank_code
+		WHERE estm.estm_num = #{num}
+		AND estm.apply_yn = 'Y'
+	</select>
+	
+	<select id="searchEstmDetailItems" resultType="kr.happyjob.study.accounting.model.UnpaidDetailItemModel">
+		SELECT 
+			ii.item_name AS itemName,
+			ii.provide_value AS provideValue,
+			ii.item_price AS itemPrice,
+			ii.item_surtax AS itemSurtax,
+			ed.qut
+		FROM tb_item_info ii
+		LEFT JOIN tb_estm_detail ed ON ed.item_code = ii.item_code
+		LEFT JOIN tb_estm_info ei ON ei.estm_num = ed.estm_num
+		WHERE ei.estm_num = #{num}
+		AND ei.apply_yn = 'Y'
+	</select>
+	
+	<select id="searchObtainDetail" resultType="kr.happyjob.study.accounting.model.UnpaidDetailModel">
+		SELECT
+			ob.seq AS num,
+			date_format(ob.obtain_date, '%Y-%m-%d') AS bookDate,
+			ob.deposityn AS unpaidState,
+			(ob.obtain_count * it.item_price) AS amount,
+			cu.cust_name AS custName,
+			cu.cust_person AS custPerson,
+			cu.cust_person_ph AS custPersonPh,
+			dc.detail_name AS bankName,
+			cu.cust_account AS custAccount,
+			cu.cust_name AS userName,
+			if(DATEDIFF(ob.delivery_date, now()) <![CDATA[<=]]> 0, 'Y', 'N') AS expireState,
+			date_format(ob.delivery_date, '%Y-%m-%d') AS expireDate
+		FROM tb_obtain ob
+		LEFT JOIN tb_cust_info cu ON cu.cust_id = ob.cust_id
+    	LEFT JOIN tb_item_info it ON it.item_code = ob.item_code
+		LEFT JOIN tb_detail_code dc ON dc.detail_code = cu.bank_code
+		WHERE ob.seq = #{num}
+	</select>
+	
+	<select id="searchObtainDetailItems" resultType="kr.happyjob.study.accounting.model.UnpaidDetailItemModel">
+    	SELECT 
+			it.item_name AS itemName,
+			it.provide_value AS provideValue,
+			it.item_price AS itemPrice,
+			it.item_surtax AS itemSurtax,
+			ob.obtain_count AS qut
+		FROM tb_obtain ob
+		LEFT JOIN tb_item_info it ON it.item_code = ob.item_code
+		WHERE ob.seq = #{num};
+	</select>
+	
+	<update id="depositUnpaid">
+		UPDATE tb_estm_info
+		SET
+			unpaid_state = 'Y'
+		WHERE estm_num = #{num}
+		AND apply_yn = 'Y'
+	</update>
+</mapper>

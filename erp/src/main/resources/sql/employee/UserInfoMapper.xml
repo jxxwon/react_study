@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.employee.dao.UserInfoDao">
+
+	<select id="empMgtList" resultType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empMgtList*/
+		SELECT
+		    u.loginID,
+		    u.name,
+		    u.hp,
+		    u.email,
+		    u.regdate,
+		    u.zip_code AS zipCode,
+		    u.addr,
+		    u.addr_detail AS addrDetail,
+		    u.birthday,
+		    u.dept_code AS deptCode,
+		    d1.detail_name AS deptName,
+		    u.pos_code AS posCode,
+		    d2.detail_name AS posName,
+		    u.job_code AS jobCode,
+		    u.school,
+		    u.emp_date AS empDate,
+		    u.leave_date AS leaveDate,
+		    u.empl_status AS emplStatus,
+		    d3.detail_name AS userType
+		FROM
+		    tb_userinfo u
+		LEFT JOIN
+		    tb_detail_code d1 ON u.dept_code = d1.detail_code
+		LEFT JOIN
+			tb_detail_code d2 ON u.pos_code = d2.detail_code
+		LEFT JOIN 
+			tb_detail_code d3 ON u.user_type = d3.detail_code
+		<where>
+			<if test="(searchDept != null) and (!''.equals(searchDept))">
+				AND u.dept_code = #{searchDept}
+			</if>
+			<if test="(searchPos != null) and (!''.equals(searchPos))">
+				AND u.pos_code = #{searchPos}
+			</if>
+			<if test = "(search != null) and (!''.equals(search))">
+				<if test = "(searchUser == 'loginId')">
+					AND u.loginID LIKE CONCAT('%', #{search}, '%')
+				</if>
+				<if test = "(searchUser == 'name')">
+					AND u.name LIKE CONCAT('%', #{search}, '%')
+				</if>
+			</if>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND emp_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND emp_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+			</if>
+			<if test = "(searchStatus != null) and (!''.equals(searchStatus))">
+				AND empl_status = #{searchStatus}
+			</if>
+		</where>
+		ORDER BY
+		    u.regdate DESC
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="empMgtListCnt" resultType="int">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empMgtListCnt*/
+		SELECT COUNT(loginID) FROM tb_userinfo
+		<where>
+			<if test="(searchDept != null) and (!''.equals(searchDept))">
+				AND dept_code = #{searchDept}
+			</if>
+			<if test="(searchPos != null) and (!''.equals(searchPos))">
+				AND pos_code = #{searchPos}
+			</if>
+			<if test = "(search != null) and (!''.equals(search))">
+				<if test = "(searchUser == 'loginId')">
+					AND loginID LIKE CONCAT('%', #{search}, '%')
+				</if>
+				<if test = "(searchUser == 'name')">
+					AND name LIKE CONCAT('%', #{search}, '%')
+				</if>
+			</if>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND emp_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND emp_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+			</if>
+			<if test = "(searchStatus != null) and (!''.equals(searchStatus))">
+				AND empl_status = #{searchStatus}
+			</if>
+		</where>
+	</select>
+	
+	<select id="empSalaryList" resultType="kr.happyjob.study.employee.model.SalaryClassModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empMgtListCnt*/
+		SELECT 
+			d.detail_name AS posName,
+			s.year1,
+			s.year2,
+			s.year3,
+			s.year4,
+			s.year5 
+		FROM tb_detail_code d
+		JOIN tb_salary_class s ON d.detail_code = s.pos_code
+		WHERE d.group_code = 'user_position'
+	</select>
+	
+	<select id="empSalaryListCnt" resultType="int">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empMgtListCnt*/
+		SELECT COUNT(pos_code) FROM tb_salary_class
+	</select>
+	
+	<insert id="empSave" parameterType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empSave*/
+		INSERT INTO tb_userinfo
+			(
+				loginID,
+				password,
+				name,
+				sex,
+				hp,
+				email,
+				regdate,
+				zip_code,
+				addr,
+				addr_detail,
+				birthday,
+				dept_code,
+				pos_code,
+				job_code,
+				school,
+				emp_date,
+				empl_status,
+				avail_day,
+				user_type,
+				file_name,
+				phsycal_path,
+				logical_path,
+				file_size,
+				file_ext
+			)
+		VALUES
+			(
+				#{loginId},
+				#{loginId},
+				#{name},
+				#{sex},
+				#{hp},
+				#{email},
+				now(),
+				#{zipCode},
+				#{addr},
+				#{addrDetail},
+				#{birthday},
+				#{deptCode},
+				#{posCode},
+				#{jobCode},
+				#{school},
+				#{empDate},
+				#{emplStatus},
+				#{availDay},
+				#{userType},
+				<if test="'Y'.toString() eq fileYn">
+					#{fileInfo.file_nm},
+					#{fileInfo.file_loc},
+					#{fileInfo.vrfile_loc},
+					#{fileInfo.file_size},
+					#{fileInfo.fileExtension}
+				</if>
+				<if test="'N'.toString() eq fileYn">
+       				 NULL, NULL, NULL, NULL, NULL
+    			</if>
+			)
+	</insert>
+	
+	<update id="empRetire" parameterType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empRetire*/
+		UPDATE
+			tb_userinfo
+		SET
+			empl_status = 'R',
+			leave_date = #{leaveDate},
+			leave_reason = #{leaveReason}
+		WHERE loginID = #{loginId}
+	</update>
+	
+	<select id="empDetail" resultType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empDetail*/
+		SELECT
+		    u.file_name AS fileName,
+			u.phsycal_path AS phsycalPath,
+			u.logical_path AS logicalPath,
+			u.file_size AS fileSize,
+			u.file_ext AS fileExt,
+		    u.loginID,
+		    u.name,
+		    u.sex,
+		    u.birthday,
+		    u.school,
+		    u.hp,
+		    u.email,
+		    u.zip_code AS zipCode,
+		    u.addr,
+		    u.addr_detail AS addrDetail,
+		    s.bank_code AS bankCode,
+		    s.salary_account AS salaryAccount,
+		    u.dept_code AS deptCode,
+		    d1.detail_name AS deptName,
+		    u.pos_code AS posCode,
+		    d2.detail_name AS posName,
+		    u.job_code AS jobCode,
+		    u.empl_status AS emplStatus,
+		    u.emp_date AS empDate,
+		    u.leave_date AS leaveDate,
+		    u.leave_reason AS leaveReason,
+		    u.empl_status AS emplStatus,
+		    s.annual_salary AS annualSalary,
+		    s.pens,
+		    u.avail_day AS availDay,
+		    d3.detail_code AS userType
+		FROM
+		    tb_userinfo u
+		LEFT JOIN
+		    tb_detail_code d1 ON u.dept_code = d1.detail_code
+		LEFT JOIN
+			tb_detail_code d2 ON u.pos_code = d2.detail_code
+		LEFT JOIN
+			tb_salary_info s ON u.loginID = s.loginID
+		LEFT JOIN
+			tb_detail_code d3 ON u.user_type = d3.detail_code
+		WHERE
+			u.loginID = #{loginId}
+	</select>
+	
+	<insert id="empSalarySave" parameterType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empSalarySave*/
+		INSERT INTO tb_salary_info
+			(
+				loginID,
+				bank_code,
+				salary_account,
+				annual_salary,
+				pens
+			)
+		VALUES(
+			#{loginId},
+			#{bankCode},
+			#{salaryAccount},
+			#{annualSalary},
+			#{pens}
+		)
+	</insert>
+	
+	<update id="empUpdate" parameterType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empUpdate*/
+		UPDATE
+			tb_userinfo
+		SET
+			name = #{name},
+			sex = #{sex},
+			hp = #{hp},
+			email = #{email},
+			zip_code = #{zipCode},
+			addr = #{addr},
+			addr_detail = #{addrDetail},
+			birthday = #{birthday},
+			dept_code = #{deptCode},
+			pos_code = #{posCode},
+			job_code = #{jobCode},
+			school = #{school},
+			emp_date = #{empDate},
+			empl_status = #{emplStatus},
+			avail_day = #{availDay},
+			user_type = #{userType},
+			<if test="'Y'.toString() eq fileYn">
+				file_name = #{fileInfo.file_nm},
+				phsycal_path = #{fileInfo.file_loc},
+				logical_path = #{fileInfo.vrfile_loc},
+				file_size = #{fileInfo.file_size},
+				file_ext = #{fileInfo.fileExtension}
+			</if>
+			<if test="'N'.toString() eq fileYn">
+				file_name = null,
+				phsycal_path = null,
+				logical_path = null,
+				file_size = null,
+				file_ext = null
+			</if>
+		WHERE
+			loginID = #{loginId}
+	</update>
+	
+	<update id="empSalaryUpdate" parameterType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empSalaryUpdate*/
+		UPDATE
+			tb_salary_info
+		SET
+			bank_code = #{bankCode},
+			salary_account = #{salaryAccount},
+			annual_salary = #{annualSalary},
+			pens = #{pens}
+		WHERE
+			loginID = #{loginId}
+	</update>
+	
+	<select id = "empUserIdChk" resultType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empUserIdChk*/
+		SELECT
+			loginID,
+			name,
+			sex,
+			hp,
+			email,
+			regdate,
+			zip_code,
+			addr,
+			addr_detail,
+			birthday,
+			dept_code,
+			pos_code,
+			job_code,
+			school,
+			emp_date,
+			leave_date,
+			leave_reason,
+			empl_status,
+			user_type
+		FROM
+			tb_userinfo
+		WHERE loginID = #{loginId}
+	</select>
+	
+	<insert id="promHistSave" parameterType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.promHistSave*/
+		INSERT INTO tb_prom_hist
+			(
+				loginID,
+				dept_code,
+				pos_code,
+				use_yn,
+				issu_date,
+				ordr
+			)
+		VALUES
+			(
+				#{loginId},
+				#{deptCode},
+				#{posCode},
+				'Y',
+				now(),
+				1
+			)
+	</insert>
+	
+	<select id="empGradeList" resultType="kr.happyjob.study.employee.model.PromHistModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empGradeList*/
+		SELECT
+		    p.loginID,
+		    u.name AS name,
+		    p.dept_code AS deptCode,
+		    d1.detail_name AS deptName,
+		    p.pos_code AS posCode,
+		    d2.detail_name AS posName,
+		    p.issu_date AS issuDate,
+		    p.use_yn
+		FROM
+		    tb_prom_hist p
+		LEFT JOIN
+			tb_userinfo u ON p.loginID = u.loginID
+		LEFT JOIN
+		    tb_detail_code d1 ON p.dept_code = d1.detail_code
+		LEFT JOIN
+			tb_detail_code d2 ON p.pos_code = d2.detail_code
+		<where>
+			<if test="(searchDept != null) and (!''.equals(searchDept))">
+				AND p.dept_code = #{searchDept}
+			</if>
+			<if test="(searchPos != null) and (!''.equals(searchPos))">
+				AND p.pos_code = #{searchPos}
+			</if>
+			<if test = "(search != null) and (!''.equals(search))">
+				<if test = "(searchUser == 'loginId')">
+					AND p.loginID LIKE CONCAT('%', #{search}, '%')
+				</if>
+				<if test = "(searchUser == 'name')">
+					AND p.name LIKE CONCAT('%', #{search}, '%')
+				</if>
+			</if>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND issu_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND issu_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+			</if>
+			AND p.use_yn = 'Y'
+		</where>
+		ORDER BY
+		    p.issu_date DESC
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="empGradeListCnt" resultType="int">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empGradeListCnt*/
+		SELECT COUNT(*) FROM tb_prom_hist
+		<where>
+			<if test="(searchDept != null) and (!''.equals(searchDept))">
+				AND dept_code = #{searchDept}
+			</if>
+			<if test="(searchPos != null) and (!''.equals(searchPos))">
+				AND pos_code = #{searchPos}
+			</if>
+			<if test = "(search != null) and (!''.equals(search))">
+				<if test = "(searchUser == 'loginId')">
+					AND loginID LIKE CONCAT('%', #{search}, '%')
+				</if>
+				<if test = "(searchUser == 'name')">
+					AND name LIKE CONCAT('%', #{search}, '%')
+				</if>
+			</if>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND issu_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND issu_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+			</if>
+			AND use_yn = 'Y'
+		</where>
+	</select>
+	
+	<select id="empGradeDetailList" resultType="kr.happyjob.study.employee.model.PromHistModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empGradeDetailList*/
+		SELECT
+		    p.loginID,
+		    u.name AS name,
+		    p.dept_code AS deptCode,
+		    d1.detail_name AS deptName,
+		    p.pos_code AS posCode,
+		    d2.detail_name AS posName,
+		    p.issu_date AS issuDate
+		FROM
+		    tb_prom_hist p
+		LEFT JOIN
+			tb_userinfo u ON p.loginID = u.loginID
+		LEFT JOIN
+		    tb_detail_code d1 ON p.dept_code = d1.detail_code
+		LEFT JOIN
+			tb_detail_code d2 ON p.pos_code = d2.detail_code
+		WHERE p.loginID = #{loginId}
+		ORDER BY ordr DESC
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="empGradeDetailListCnt" resultType="int">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.empGradeDetailListCnt*/
+		SELECT COUNT(*) FROM tb_prom_hist WHERE loginID = #{loginId}
+	</select>
+	
+	<insert id="insertPromHist" parameterType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.insertPromHist*/
+		<selectKey keyProperty="ordr" resultType="int" order="BEFORE">
+	        SELECT COALESCE(MAX(ordr), 0) + 1 AS ordr
+	        FROM tb_prom_hist
+	        WHERE loginID = #{loginId}
+	    </selectKey>
+	    INSERT INTO tb_prom_hist
+	    (
+	        loginID,
+	        dept_code,
+	        pos_code,
+	        use_yn,
+	        issu_date,
+	        ordr
+	    )
+	    VALUES
+	    (
+	        #{loginId},
+	        #{deptCode},
+	        #{posCode},
+	        'Y',
+	        NOW(),
+	        #{ordr}
+	    )
+	</insert>
+	
+	<update id="updatePromHist" parameterType="kr.happyjob.study.employee.model.UserInfoModel">
+		/*kr.happyjob.study.employee.dao.UserInfoDao.updatePromHist*/
+		UPDATE
+			tb_prom_hist
+		SET
+			use_yn = 'N'
+		WHERE
+			loginID = #{loginId}
+	</update>
+</mapper>

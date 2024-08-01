@@ -1,0 +1,34 @@
+/* .salaryList { width: 20%; display: inline-block; align: center;} */
+/* .salarytable { display: inline;} */
+
+.deductList {
+	width: 40%; 
+	float: left;
+	padding: 0 30px 20px 30px;
+}
+
+.paymentList {
+	width: 40%; 
+	float: right;
+	padding: 0 30px 20px 30px;
+}
+
+.userInput { 
+	display: flex; 
+	justify-content: space-evenly; 
+	padding: 20px; 
+	margin: 20px 0 20px 0;
+}
+
+.listContainer {
+	height: 500px;
+    border: 1px solid #e2e6ed;
+}
+
+table.col tbody th {
+	height: 27px;
+    padding: 5px 10px;
+    border: 1px solid #bbc2cd;
+    color: #868686;
+    text-align: center;
+}

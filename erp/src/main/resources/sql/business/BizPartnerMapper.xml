@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.business.dao.BizPartnerDao">
+	<select id="bizPartnerList" resultType="kr.happyjob.study.business.model.BizPartnerModel">
+		SELECT 
+			cust_id				as custId,
+			cust_name			as custName,
+			cust_ph				as custPh,
+			cust_fax			as custFax,
+			cust_person			as custPerson,
+			cust_person_ph		as custPersonPh,
+			cust_zip			as custZip,
+			cust_addr			as custAddr,
+			cust_detail_addr	as custDetailAddr,
+			biz_num				as bizNum,
+			cust_email			as custEmail,
+			industry_code		as industryCode,
+			bank_code			as bankCode,
+			cust_account		as custAccount,
+			cust_memo			as custMemo,
+			reg_date			as regDate
+		FROM 
+			tb_cust_info
+		<where>
+			<if test="(searchPartnerName != null) and (!''.equals(searchPartnerName))">
+				AND cust_name LIKE CONCAT('%', #{searchPartnerName}, '%')
+			</if>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND reg_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND reg_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+			</if>
+		</where>
+		ORDER BY 
+			cust_id DESC
+		<if test="(startSeq != null)">
+			LIMIT #{startSeq}, #{pageSize}
+		</if>
+	</select>
+	
+	<select id="bizPartnerListCnt" resultType="int">
+		SELECT
+			count(*)
+		FROM 
+			tb_cust_info
+		<where>
+			<if test="(searchPartnerName != null) and (!''.equals(searchPartnerName))">
+				AND cust_name LIKE CONCAT('%', #{searchPartnerName}, '%')
+			</if>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND reg_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND reg_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+			</if>
+		</where>
+	</select>
+	
+	<insert id="saveBizPartner">
+		<selectKey resultType="int" keyProperty="custId" order="BEFORE">
+			SELECT IFNULL(max(cust_id), 0) + 1 FROM tb_cust_info
+		</selectKey>
+		INSERT INTO tb_cust_info 
+			(cust_id, cust_name, cust_ph, cust_person, cust_person_ph, cust_zip, cust_addr, cust_detail_addr, 
+			biz_num, cust_email, industry_code, bank_code, cust_account, cust_memo, reg_date)
+		VALUES
+			(#{custId}, #{custName}, #{custPh}, #{custPerson}, #{custPersonPh}, #{custZip}, #{custAddr}, #{custDetailAddr}, 
+			#{bizNum}, #{custEmail}, #{industryCode}, #{bankCode}, #{custAccount}, #{custMemo}, now())
+	</insert>
+	
+	<select id="bizPartnerDetail" parameterType="int" resultType="kr.happyjob.study.business.model.BizPartnerModel">
+		SELECT 
+			cust_id				as custId,
+			cust_name			as custName,
+			cust_ph				as custPh,
+			cust_fax			as custFax,
+			cust_person			as custPerson,
+			cust_person_ph		as custPersonPh,
+			cust_zip			as custZip,
+			cust_addr			as custAddr,
+			cust_detail_addr	as custDetailAddr,
+			biz_num				as bizNum,
+			cust_email			as custEmail,
+			industry_code		as industryCode,
+			bank_code			as bankCode,
+			cust_account		as custAccount,
+			cust_memo			as custMemo,
+			reg_date			as regDate
+		FROM 
+			tb_cust_info
+		WHERE
+			cust_id = #{custId}
+	</select>
+	
+	<update id="updateBizPartner">
+		UPDATE tb_cust_info
+		SET
+			cust_name = #{custName},
+			cust_ph = #{custPh},
+			cust_fax = #{custFax},
+			cust_person = #{custPerson},
+			cust_person_ph = #{custPersonPh},
+			cust_zip = #{custZip},
+			cust_addr = #{custAddr},
+			cust_detail_addr = #{custDetailAddr},
+			biz_num = #{bizNum},
+			cust_email = #{custEmail},
+			industry_code = #{industryCode},
+			bank_code = #{bankCode},
+			cust_account = #{custAccount},
+			cust_memo = #{custMemo}
+		WHERE
+			cust_id = #{custId} 
+	</update>
+	
+	<delete id="deleteBizPartner">
+		DELETE FROM tb_cust_info
+		WHERE cust_id = #{custId}
+	</delete>
+</mapper>

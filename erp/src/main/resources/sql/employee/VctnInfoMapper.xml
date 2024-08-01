@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.employee.dao.VctnInfoDao">
+
+	<select id="vctnInfo" resultType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.vctnInfo*/
+		SELECT
+		    v.seq,
+		    u.loginID,
+		    d.detail_name AS deptName,
+		    u.name,
+		    v.vctn_code AS vctnCode,
+		    (SELECT sum(v.use_date) FROM tb_vctn_info v WHERE v.loginID = #{loginID}) AS useDate,
+		    u.avail_day AS availDay
+		FROM
+		    tb_userinfo u
+		LEFT JOIN (
+		    SELECT loginID, MAX(seq) AS maxSeq
+		    FROM tb_vctn_info
+		    GROUP BY loginID
+		) max_v ON u.loginID = max_v.loginID
+		LEFT JOIN tb_vctn_info v ON u.loginID = v.loginID AND v.seq = max_v.maxSeq
+		LEFT JOIN tb_detail_code d ON u.dept_code = d.detail_code
+		WHERE u.loginID = #{loginID}
+	</select>
+	
+	<insert id="saveVctn" parameterType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.saveVctn*/
+		<selectKey resultType="int" keyProperty="seq" order="BEFORE">
+			SELECT IFNULL(max(seq), 0) + 1 FROM tb_vctn_info
+		</selectKey>
+		INSERT INTO tb_vctn_info
+			(
+				seq,
+				loginID,
+				vctn_code,
+				use_date,
+				remain_day,
+				vctn_reason,
+				vctn_str_date,
+				vctn_end_date,
+				emg_contact,
+				apply_yn,
+				reg_date
+			)
+		VALUES
+			(
+				#{seq},
+				#{loginId},
+				#{vctnCode},
+				#{useDate},
+				#{remainDay},
+				#{vctnReason},
+				#{vctnStrDate},
+				#{vctnEndDate},
+				#{emgContact},
+				'W',
+				now()
+			)
+	</insert>
+	
+	<select id="vctnList" resultType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.vctnList*/
+		SELECT
+			v.seq,
+			v.vctn_code AS vctnCode,
+			d.detail_name AS vctnName,
+			v.loginID AS loginId,
+			u.name,
+			v.vctn_str_date AS vctnStrDate,
+			v.vctn_end_date AS vctnEndDate,
+			v.applyer,
+			v.apply_yn AS applyYn
+		FROM
+			tb_vctn_info v
+		LEFT JOIN
+			tb_detail_code d ON v.vctn_code = d.detail_code
+		LEFT JOIN
+			tb_userinfo u ON v.loginID = u.loginID
+		<where>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND (
+					v.vctn_str_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d') 
+					OR v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+					OR (v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d') 
+						AND v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d'))
+				)
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND (
+					v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d') 
+					OR v.vctn_end_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+					OR (v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d') 
+						AND v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d'))
+				)
+			</if>
+			<if test="(searchLoginId != null) and (!''.equals(searchLoginId))">
+				AND v.loginID LIKE CONCAT('%', #{searchLoginId}, '%') 
+			</if>
+			<if test="(searchName != null) and (!''.equals(searchName))">
+				AND u.name LIKE CONCAT('%', #{searchName}, '%') 
+			</if>
+			<if test="(searchApprove != null) and (!''.equals(searchApprove))">
+				AND v.apply_yn = #{searchApprove}
+			</if>
+			AND v.loginID = #{loginId}
+		</where>
+		ORDER BY v.vctn_str_date DESC
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="vctnListCnt" resultType="int">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.vctnListCnt*/
+		SELECT
+			COUNT(seq)
+		FROM
+			tb_vctn_info
+		<where>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND (
+					vctn_str_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d') 
+					OR vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+					OR (vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d') 
+						AND vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d'))
+				)
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND (
+					vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d') 
+					OR vctn_end_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+					OR (vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d') 
+						AND vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d'))
+				)
+			</if>
+			<if test="(searchLoginId != null) and (!''.equals(searchLoginId))">
+				AND loginID LIKE CONCAT('%', #{searchLoginId}, '%') 
+			</if>
+			<if test="(searchName != null) and (!''.equals(searchName))">
+				AND name LIKE CONCAT('%', #{searchName}, '%') 
+			</if>
+			<if test="(searchApprove != null) and (!''.equals(searchApprove))">
+				AND apply_yn = #{searchApprove}
+			</if>
+			AND loginID = #{loginId}
+		</where>
+	</select>
+	
+	<select id="vctnDetail" resultType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.vctnDetail*/
+		SELECT
+			v.loginID AS loginId,
+			u.name,
+			d.detail_name AS deptName,
+			v.vctn_code AS vctnCode,
+			v.vctn_reason AS vctnReason,
+			v.vctn_str_date AS vctnStrDate,
+			v.vctn_end_date AS vctnEndDate,
+			v.emg_contact AS emgContact,
+			v.applyer,
+			v.reg_date AS regDate,
+			v.reject_note AS rejectNote,
+			v.apply_yn AS applyYn
+		FROM
+			tb_vctn_info v
+		LEFT JOIN
+			tb_userinfo u ON v.loginID = u.loginID
+		LEFT JOIN
+			tb_detail_code d ON u.dept_code = d.detail_code			
+		WHERE
+			seq = #{seq}
+	</select>
+	
+	<update id="updateVctn" parameterType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.updateVctn*/
+		UPDATE
+			tb_vctn_info
+		SET
+			vctn_code = #{vctnCode},
+			vctn_reason = #{vctnReason},
+			vctn_str_date = #{vctnStrDate},
+			vctn_end_date = #{vctnEndDate},
+			emg_contact = #{emgContact}
+		WHERE
+			seq = #{seq}
+	</update>
+	
+	<delete id="deleteVctn">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.deleteVctn*/
+		DELETE FROM tb_vctn_info WHERE seq = #{seq}
+	</delete>
+	
+	<select id="chkVctn" resultType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.chkVctn*/
+		SELECT
+			v.seq,
+			v.vctn_code AS vctnCode,
+			d.detail_name AS vctnName,
+			v.loginID AS loginId,
+			u.name,
+			v.vctn_str_date AS vctnStrDate,
+			v.vctn_end_date AS vctnEndDate,
+			v.applyer,
+			v.apply_yn AS applyYn
+		FROM
+			tb_vctn_info v
+		LEFT JOIN
+			tb_detail_code d ON v.vctn_code = d.detail_code
+		LEFT JOIN
+			tb_userinfo u ON v.loginID = u.loginID
+		<where>
+				AND (
+					v.vctn_str_date <![CDATA[>=]]> STR_TO_DATE(#{vctnStrDate}, '%Y-%m-%d') 
+					OR v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{vctnStrDate}, '%Y-%m-%d')
+					OR (v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{vctnStrDate}, '%Y-%m-%d') 
+						AND v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{vctnStrDate}, '%Y-%m-%d'))
+				)
+				AND (
+					v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{vctnEndDate}, '%Y-%m-%d') 
+					OR v.vctn_end_date <![CDATA[<=]]> STR_TO_DATE(#{vctnEndDate}, '%Y-%m-%d')
+					OR (v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{vctnEndDate}, '%Y-%m-%d') 
+						AND v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{vctnEndDate}, '%Y-%m-%d'))
+				)
+			AND (v.apply_yn = 'Y' OR v.apply_yn = 'W')
+			AND v.loginID = #{loginId}
+		</where>
+	</select>
+	
+	<select id="remainVctn" resultType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.remainVctn*/
+		SELECT
+		    MAX(v.seq) AS seq,
+		    v.loginID,
+		    v.remain_day AS remainDay,
+		    u.avail_day AS availDay
+		FROM
+		    tb_userinfo u
+		LEFT JOIN
+			tb_vctn_info v ON u.loginID = v.loginID
+		WHERE u.loginID = #{loginId}
+	</select>
+	
+	<select id="vctnApproveList" resultType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.vctnApproveList*/
+		SELECT
+			v.seq,
+			v.loginId,
+			u.name,
+			d.detail_name AS vctnName,
+			v.vctn_str_date AS vctnStrDate,
+			v.vctn_end_date AS vctnEndDate,
+			v.apply_date AS applyDate,
+			v.applyer,
+			v.apply_yn AS applyYn
+		FROM
+			tb_vctn_info v
+		LEFT JOIN
+			tb_userinfo u ON v.loginId = u.loginId
+		LEFT JOIN
+			tb_detail_code d ON v.vctn_code = d.detail_code
+		<where>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND (
+					v.vctn_str_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d') 
+					OR v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+					OR (v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d') 
+						AND v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d'))
+				)
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND (
+					v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d') 
+					OR v.vctn_end_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+					OR (v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d') 
+						AND v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d'))
+				)
+			</if>
+			<if test="(searchLoginId != null) and (!''.equals(searchLoginId))">
+				AND v.loginID LIKE CONCAT('%', #{searchLoginId}, '%') 
+			</if>
+			<if test="(searchName != null) and (!''.equals(searchName))">
+				AND u.name LIKE CONCAT('%', #{searchName}, '%') 
+			</if>
+			<if test="(searchApprove != null) and (!''.equals(searchApprove))">
+				AND v.apply_yn = #{searchApprove}
+			</if>
+		</where>
+		ORDER BY seq DESC
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="vctnApproveListCnt" resultType="int">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.vctnApproveListCnt*/
+		SELECT
+			COUNT(seq)
+		FROM
+			tb_vctn_info v
+		LEFT JOIN
+			tb_userinfo u ON v.loginId = u.loginId
+		LEFT JOIN
+			tb_detail_code d ON v.vctn_code = d.detail_code
+		<where>
+			<if test="(searchStDate != null) and (!''.equals(searchStDate))">
+				AND (
+					v.vctn_str_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d') 
+					OR v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d')
+					OR (v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d') 
+						AND v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchStDate}, '%Y-%m-%d'))
+				)
+			</if>
+			<if test="(searchEdDate != null) and (!''.equals(searchEdDate))">
+				AND (
+					v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d') 
+					OR v.vctn_end_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d')
+					OR (v.vctn_str_date <![CDATA[<=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d') 
+						AND v.vctn_end_date <![CDATA[>=]]> STR_TO_DATE(#{searchEdDate}, '%Y-%m-%d'))
+				)
+			</if>
+			<if test="(searchLoginId != null) and (!''.equals(searchLoginId))">
+				AND v.loginID LIKE CONCAT('%', #{searchLoginId}, '%') 
+			</if>
+			<if test="(searchName != null) and (!''.equals(searchName))">
+				AND u.name LIKE CONCAT('%', #{searchName}, '%') 
+			</if>
+			<if test="(searchApprove != null) and (!''.equals(searchApprove))">
+				AND v.apply_yn = #{searchApprove}
+			</if>
+		</where>
+	</select>
+	
+	<select id="vctnApproveDetail" resultType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.vctnApproveDetail*/
+		SELECT
+			v.loginID AS loginId,
+			u.name,
+			d.detail_name AS deptName,
+			v.vctn_code AS vctnCode,
+			v.vctn_reason AS vctnReason,
+			v.vctn_str_date AS vctnStrDate,
+			v.vctn_end_date AS vctnEndDate,
+			v.emg_contact AS emgContact,
+			v.applyer,
+			v.reg_date AS regDate,
+			v.reject_note AS rejectNote
+		FROM
+			tb_vctn_info v
+		LEFT JOIN
+			tb_userinfo u ON v.loginID = u.loginID
+		LEFT JOIN
+			tb_detail_code d ON u.dept_code = d.detail_code			
+		WHERE
+			seq = #{seq}
+	</select>
+	
+	<update id="approvalVctn" parameterType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.approvalVctn*/
+		UPDATE
+			tb_vctn_info
+		SET
+			applyer = #{loginId},
+			apply_yn = 'Y',
+			apply_date = now()
+		WHERE
+			seq = #{seq}
+	</update>
+	
+	<update id="rejectVctn" parameterType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.rejectVctn*/
+		UPDATE
+			tb_vctn_info
+		SET
+			applyer = #{loginId},
+			apply_yn = 'N',
+			apply_date = now(),
+			reject_note = #{rejectNote},
+			use_date = '0'
+		WHERE
+			seq = #{seq}
+	</update>
+	
+	<select id="vctnInfoCalendar" resultType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.vctnInfoCalendar*/
+		SELECT
+		    seq,
+		    vctn_str_date AS vctnStrDate,
+		    vctn_end_date AS vctnEndDate,
+		    apply_yn AS applyYn
+		FROM
+		    tb_vctn_info
+		<where>
+		    (
+		        (vctn_str_date <![CDATA[>=]]> #{searchStrDate} AND vctn_str_date <![CDATA[<=]]> #{searchEndDate})
+		        OR
+		        (vctn_end_date <![CDATA[>=]]> #{searchStrDate} AND vctn_end_date <![CDATA[<=]]> #{searchEndDate})
+		        OR
+		        (vctn_str_date <![CDATA[<=]]> #{searchStrDate} AND vctn_end_date <![CDATA[>=]]> #{searchEndDate})
+		        OR
+		        (vctn_str_date <![CDATA[<=]]> #{searchStrDate} AND vctn_end_date <![CDATA[>=]]> #{searchStrDate} AND vctn_end_date <![CDATA[<=]]> #{searchEndDate})
+		    )
+		</where>
+		ORDER BY
+			CASE apply_yn
+		        WHEN 'W' THEN 1
+		        WHEN 'Y' THEN 2
+		        WHEN 'N' THEN 3
+		    END	
+	</select>
+	
+	<select id="vctnCalendarApplyList" resultType="kr.happyjob.study.employee.model.VctnInfoModel">
+		/*kr.happyjob.study.employee.dao.VctnInfoDao.vctnCalendarList*/
+		SELECT
+			v.loginID,
+			u.name,
+			u.dept_code AS deptCode,
+			v.vctn_code AS vctnCode,
+			d1.detail_name AS deptName,
+			d2.detail_name AS vctnName
+		FROM
+			tb_vctn_info v
+		LEFT JOIN
+			tb_userinfo u ON v.loginID = u.loginID
+		LEFT JOIN
+			tb_detail_code d1 ON u.dept_code = d1.detail_code
+		LEFT JOIN
+			tb_detail_code d2 ON v.vctn_code = d2.detail_code
+		<where>
+		    (
+		        (vctn_str_date <![CDATA[>=]]> #{date} AND vctn_str_date <![CDATA[<=]]> #{date})
+		        OR
+		        (vctn_end_date <![CDATA[>=]]> #{date} AND vctn_end_date <![CDATA[<=]]> #{date})
+		        OR
+		        (vctn_str_date <![CDATA[<=]]> #{date} AND vctn_end_date <![CDATA[>=]]> #{date})
+		        OR
+		        (vctn_str_date <![CDATA[<=]]> #{date} AND vctn_end_date <![CDATA[>=]]> #{date} AND vctn_end_date <![CDATA[<=]]> #{date})
+		    )
+		    AND
+		    	apply_yn = #{applyYn}
+		</where>
+	</select>
+	
+</mapper>

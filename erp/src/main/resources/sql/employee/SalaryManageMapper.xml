@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.employee.dao.SalaryManageDao">
+	<select id="salaryManageList" resultType="kr.happyjob.study.employee.model.SalaryModel">
+		SELECT
+			tsi.salary_year,
+		    tsi.nation_pens,
+		    tsi.health_insur,
+		    tsi.empl_insur,
+		    tsi.workers_insur,
+		    tsi.annual_salary,
+			tsi.salary,
+			tsi.salary_year,
+			tsi.pens,
+			tsi.pay_status,
+		    tu.name,
+		    tu.loginID,
+		    tu.emp_date,
+		    tu.dept_code,
+		    tu.pos_code,
+		    tdc1.detail_name AS pos_name,
+		    tdc2.detail_name AS dept_name
+		FROM
+		    tb_salary_info tsi
+		LEFT OUTER JOIN tb_userinfo tu ON
+		    tsi.loginID = tu.loginID
+		LEFT OUTER JOIN tb_detail_code tdc1 ON
+		    tu.pos_code = tdc1.detail_code
+	    LEFT OUTER JOIN tb_detail_code tdc2 ON
+		    tu.dept_code = tdc2.detail_code		    
+		<where>
+			<if test="(searchUser != null) and (!''.equals(searchUser))">
+				AND tu.name LIKE CONCAT('%', #{searchUser}, '%')
+			</if>
+			<if test="(searchDate != null) and (!''.equals(searchDate))">
+				AND tsi.salary_year = #{searchDate}
+			</if>
+			<if test="(searchDept != null) and (!''.equals(searchDept))">
+				AND tu.dept_code = #{searchDept}
+			</if>
+			<if test="(searchPos != null) and (!''.equals(searchPos))">
+				AND tu.pos_code = #{searchPos}
+			</if>		
+			<if test = "(searchPayStatus != null) and (!''.equals(searchPayStatus))">
+				AND tsi.pay_status = #{searchPayStatus}
+			</if>
+		</where>		
+		ORDER BY
+			tsi.salary_year DESC
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="salaryManageListCnt" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM
+		    tb_salary_info tsi
+		LEFT OUTER JOIN tb_userinfo tu ON
+		    tsi.loginID = tu.loginID
+		LEFT OUTER JOIN tb_detail_code tdc1 ON
+		    tu.pos_code = tdc1.detail_code
+	    LEFT OUTER JOIN tb_detail_code tdc2 ON
+		    tu.dept_code = tdc2.detail_code
+		<where>
+			<if test="(searchUser != null) and (!''.equals(searchUser))">
+				AND tu.name LIKE CONCAT('%', #{searchUser}, '%')
+			</if>
+			<if test="(searchDate != null) and (!''.equals(searchDate))">
+				AND tsi.salary_year = #{searchDate}
+			</if>
+			<if test="(searchDept != null) and (!''.equals(searchDept))">
+				AND tu.dept_code = #{searchDept}
+			</if>
+			<if test="(searchPos != null) and (!''.equals(searchPos))">
+				AND tu.pos_code = #{searchPos}
+			</if>		
+			<if test = "(searchPayStatus != null) and (!''.equals(searchPayStatus))">
+				AND tsi.pay_status = #{searchPayStatus}
+			</if>
+		</where>
+	</select>
+	
+	<select id="salaryManageDetailList" resultType="kr.happyjob.study.employee.model.SalaryModel">
+		SELECT
+			tsi.salary_year,
+		    tsi.nation_pens,
+		    tsi.health_insur,
+		    tsi.empl_insur,
+		    tsi.workers_insur,
+		    tsi.annual_salary,
+			tsi.salary,
+			tsi.salary_year,
+			tsi.pens,
+			tsi.pay_status,
+		    tu.name,
+		    tu.loginID,
+		    tu.emp_date,
+		    tu.dept_code,
+		    tu.pos_code,
+		    tdc1.detail_name AS pos_name,
+		    tdc2.detail_name AS dept_name
+		FROM
+		    tb_salary_info tsi
+		LEFT OUTER JOIN tb_userinfo tu ON
+		    tsi.loginID = tu.loginID
+		LEFT OUTER JOIN tb_detail_code tdc1 ON
+		    tu.pos_code = tdc1.detail_code
+	    LEFT OUTER JOIN tb_detail_code tdc2 ON
+		    tu.dept_code = tdc2.detail_code
+		WHERE
+			tu.loginID = #{loginID}
+		ORDER BY
+			tsi.salary_year DESC
+		LIMIT #{startSeq}, #{pageSize}
+	</select>
+	
+	<select id="salaryManageDetailListCnt" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM
+		    tb_salary_info tsi
+		LEFT OUTER JOIN tb_userinfo tu ON
+		    tsi.loginID = tu.loginID
+		LEFT OUTER JOIN tb_detail_code tdc1 ON
+		    tu.pos_code = tdc1.detail_code
+	    LEFT OUTER JOIN tb_detail_code tdc2 ON
+		    tu.dept_code = tdc2.detail_code
+		WHERE
+			tu.loginID = #{loginID}
+	</select>
+	
+	<!-- 급여 지급 -->
+	<update id="salaryApprove" parameterType="kr.happyjob.study.employee.model.SalaryModel">
+		UPDATE
+			tb_salary_info
+		SET
+			pay_status = 'Y'
+		WHERE
+			loginID = #{loginID}
+			AND salary_year = #{salaryYear}
+	</update>
+		
+</mapper>
