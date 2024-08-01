@@ -8,24 +8,11 @@ import { PageNavigate } from "../../../common/pageNavigation/PageNavigate";
 import { ComnCodContext } from "../../../../api/ComnCodMgrProvider";
 import { useRecoilState } from "recoil";
 import { modalState } from "../../../../stores/modalState";
-import { ComnCodMgrModal } from "../../ComnCodMgrModal/ComnCodMgrModal";
-import { setgid } from "process";
-
-export interface IComnCodList {
-    row_num:number;
-    grp_cod: string;
-    grp_cod_nm: string;
-    grp_cod_eplti: string;
-    use_poa: string;
-    fst_enlm_dtt: number;
-    reg_date: string | null;
-    detailcnt: number;
-};
-
-export interface ISearchComnCod {
-    totalCount: number;
-    listComnGrpCodModel: IComnCodList[];
-};
+import { ComnCodMgrModal } from "../ComnCodMgrModal/ComnCodMgrModal";
+import { useNavigate } from "react-router-dom";
+import { IComnCodList, ISearchComnCod } from "../../../../models/interface/ComnCodMgr/comnCodMgrModel";
+import { postComnCodMgrApi } from "../../../../api/postComnCodMgrApi";
+import { ComnCodMgrApi } from "../../../../api/api";
 
 export const ComnCodMgrMain = () => {
     const [comnCodList, setComnCodList] = useState<IComnCodList[]>([]);
@@ -34,6 +21,7 @@ export const ComnCodMgrMain = () => {
     const { searchKeyword } = useContext(ComnCodContext);
     const [modal, setModal] = useRecoilState(modalState);
     const [grpCod, setGrpCod] = useState<string>('');
+    const navigate = useNavigate();
 
     useEffect(() => {
         searchComnCod();
@@ -41,23 +29,32 @@ export const ComnCodMgrMain = () => {
 
     // useEffect(() => {}, [searchKeyword]);
 
-    const searchComnCod = (cpage?: number) => {
+    const searchComnCod = async (cpage?: number) => {
         cpage = cpage || 1;
         // axios.post('/system/listComnGrpCodJson.do', { currentPage: cpage, pageSize: 5});
-        const postAction: AxiosRequestConfig = {
-            method: 'POST',
-            url: '/system/listComnGrpCodJson.do',
-            data: { ...searchKeyword, currentPage: cpage, pageSize: 5 },
-            headers: {
-                'Content-Type' : 'application/json', // 어떤 타입으로 보내줄지, 안 써도 알아서 찾아줌
-            }
-        };
+        // const postAction: AxiosRequestConfig = {
+        //     method: 'POST',
+        //     url: '/system/listComnGrpCodJson.do',
+        //     data: { ...searchKeyword, currentPage: cpage, pageSize: 5 },
+        //     headers: {
+        //         'Content-Type' : 'application/json', // 어떤 타입으로 보내줄지, 안 써도 알아서 찾아줌
+        //     }
+        // };
 
-        axios(postAction).then((res:AxiosResponse<ISearchComnCod>) => {
-            setComnCodList(res.data.listComnGrpCodModel);
-            setTotalCnt(res.data.totalCount);
+        // axios(postAction).then((res:AxiosResponse<ISearchComnCod>) => {
+        //     setComnCodList(res.data.listComnGrpCodModel);
+        //     setTotalCnt(res.data.totalCount);
+        //     setCurrentPage(cpage);
+        // });
+
+        const postSearchComnCod = await postComnCodMgrApi<ISearchComnCod>(ComnCodMgrApi.listComnGrpCodJson,{...searchKeyword, currentPage: cpage, pageSize: 5});
+
+
+        if(postSearchComnCod){
+            setComnCodList(postSearchComnCod.listComnGrpCodModel);
+            setTotalCnt(postSearchComnCod.totalCount);
             setCurrentPage(cpage);
-        });
+        }
     };
 
     const onPostSuccess = () => {
@@ -65,7 +62,8 @@ export const ComnCodMgrMain = () => {
         searchComnCod(currentPage);
     };
 
-    const handlerModal = (grpCod:string) => {
+    const handlerModal = (grpCod:string, e:React.MouseEvent<HTMLElement, MouseEvent>) => {
+        e.stopPropagation();
         setGrpCod(grpCod);
         setModal(!modal);
     };
@@ -97,14 +95,19 @@ export const ComnCodMgrMain = () => {
                         {comnCodList && comnCodList?.length > 0 ? (
                             comnCodList.map((a) => {
                                 return (
-                                    <tr key={a.grp_cod}>
+                                    <tr 
+                                        key={a.grp_cod} 
+                                        onClick={() => {
+                                            navigate(a.grp_cod, { state : { grpCodNm:a.grp_cod_nm } });
+                                        }}
+                                    >
                                         <StyledTd>{a.grp_cod}</StyledTd>
                                         <StyledTd>{a.grp_cod_nm}</StyledTd>
                                         <StyledTd>{a.grp_cod_eplti}</StyledTd>
                                         <StyledTd>{a.use_poa}</StyledTd>
                                         <StyledTd>{formatData(a.fst_enlm_dtt)}</StyledTd>
                                         <StyledTd>
-                                            <a onClick={()=>{handlerModal(a.grp_cod)}}>수정</a>
+                                            <a onClick={(e)=>{handlerModal(a.grp_cod, e)}}>수정</a>
                                         </StyledTd>
                                     </tr>
                                 );
