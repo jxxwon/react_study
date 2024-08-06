@@ -91,7 +91,7 @@ export const ComnCodMgrModal: FC<IComnCodMgrModalProps> = ({ onPostSuccess, grpC
     };
 
     const cleanUp = () => {
-        setComnCod();
+        setComnCod(defaultValue);
         setGrpCod('');
     }
 
